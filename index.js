@@ -73,16 +73,16 @@ app.get("/:slug", async (req, res) => {
                 color: #333;
               }
               h1 {
-                font-size: 24px;
+                font-size: 20px;
                 margin-bottom: 8px;
               }
               p {
-                font-size: 18px;
+                font-size: 16px;
               }
             </style>
           </head>
           <body>
-            <h1>Oops! This link has expired.</h1>
+            <h1>This link has expired.</h1>
             <p>Unfortunately, this link is no longer available.</p>
           </body>
         </html>
