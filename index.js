@@ -15,7 +15,7 @@ app.use(express.json());
 
 // Create short URL
 app.post("/api/shorten", async (req, res) => {
-  const { url, customSlug, password } = req.body;
+  const { url, customSlug, password, expiresAt } = req.body;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   let slug = customSlug?.trim() || nanoid(6).toLowerCase();
@@ -29,8 +29,8 @@ app.post("/api/shorten", async (req, res) => {
       return res.status(400).json({ error: "Slug already in use." });
 
     await pool.query(
-      "INSERT INTO links (slug, url, clicks, created_at, password_hash) VALUES (?, ?, 0, NOW(), ?)",
-      [slug, url, passwordHash]
+      "INSERT INTO links (slug, url, clicks, created_at, expires_at, password_hash) VALUES (?, ?, 0, NOW(), ?, ?)",
+      [slug, url, expiresAt || null, passwordHash]
     );
 
     res.json({ shortUrl: `http://localhost:${PORT}/${slug}` });
@@ -53,7 +53,40 @@ app.get("/:slug", async (req, res) => {
     const link = rows[0];
 
     if (link.expires_at && new Date(link.expires_at) < new Date()) {
-      return res.status(410).send("This link has expired");
+      return res.status(410).send(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Link Expired</title>
+            <style>
+              * {
+                margin: 0;
+                padding: 0
+              }
+              body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 16px;
+                background: #f8f9fa;
+                color: #333;
+              }
+              h1 {
+                font-size: 24px;
+                margin-bottom: 8px;
+              }
+              p {
+                font-size: 18px;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Oops! This link has expired.</h1>
+            <p>Unfortunately, this link is no longer available.</p>
+          </body>
+        </html>
+      `);
     }
 
     await pool.query("UPDATE links SET clicks = clicks + 1 WHERE slug = ?", [
