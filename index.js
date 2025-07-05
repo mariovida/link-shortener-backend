@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { nanoid } from "nanoid";
 import { pool } from "./db.js";
+import bcrypt from "bcrypt";
 
 dotenv.config();
 
@@ -14,22 +15,22 @@ app.use(express.json());
 
 // Create short URL
 app.post("/api/shorten", async (req, res) => {
-  const { url, customSlug, expiresAt } = req.body;
+  const { url, customSlug, password } = req.body;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   let slug = customSlug?.trim() || nanoid(6).toLowerCase();
+  const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
   try {
     const [rows] = await pool.query("SELECT slug FROM links WHERE slug = ?", [
       slug,
     ]);
-    if (rows.length > 0) {
+    if (rows.length > 0)
       return res.status(400).json({ error: "Slug already in use." });
-    }
 
     await pool.query(
-      "INSERT INTO links (slug, url, clicks, created_at, expires_at) VALUES (?, ?, 0, NOW(), ?)",
-      [slug, url, expiresAt || null]
+      "INSERT INTO links (slug, url, clicks, created_at, password_hash) VALUES (?, ?, 0, NOW(), ?)",
+      [slug, url, passwordHash]
     );
 
     res.json({ shortUrl: `http://localhost:${PORT}/${slug}` });
@@ -43,25 +44,23 @@ app.get("/:slug", async (req, res) => {
   const { slug } = req.params;
   try {
     const [rows] = await pool.query(
-      "SELECT url, clicks, expires_at FROM links WHERE slug = ?",
+      "SELECT url, password_hash, expires_at FROM links WHERE slug = ?",
       [slug]
     );
 
     if (rows.length === 0) return res.status(404).send("Not found");
 
-    if (rows[0].expires_at && new Date(rows[0].expires_at) < new Date()) {
+    const link = rows[0];
+
+    if (link.expires_at && new Date(link.expires_at) < new Date()) {
       return res.status(410).send("This link has expired");
     }
 
-    const url = rows[0].url;
-    const clicks = rows[0].clicks;
-
-    pool.query("UPDATE links SET clicks = ? WHERE slug = ?", [
-      clicks + 1,
+    await pool.query("UPDATE links SET clicks = clicks + 1 WHERE slug = ?", [
       slug,
     ]);
 
-    res.redirect(url);
+    res.redirect(link.url);
   } catch (error) {
     res.status(500).send("Server error");
   }
