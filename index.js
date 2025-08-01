@@ -79,6 +79,22 @@ app.get("/api/stats/:slug", async (req, res) => {
   }
 });
 
+// Delete link by slug
+app.delete("/api/links/:slug", async (req, res) => {
+  const { slug } = req.params;
+  try {
+    const [result] = await pool.query("DELETE FROM links WHERE slug = ?", [
+      slug,
+    ]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Link not found." });
+    }
+    res.json({ message: "Link deleted successfully." });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
