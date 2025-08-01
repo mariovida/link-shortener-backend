@@ -70,7 +70,7 @@ app.get("/api/stats/:slug", async (req, res) => {
       [slug]
     );
     if (rows.length === 0) {
-      return res.status(404).json({ error: "Link not found" });
+      return res.status(404).json({ error: "Link not found." });
     }
 
     res.json(rows[0]);
