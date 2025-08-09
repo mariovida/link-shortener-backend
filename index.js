@@ -61,6 +61,24 @@ app.get("/:slug", async (req, res) => {
   }
 });
 
+// Get link stats
+app.get("/api/stats/:slug", async (req, res) => {
+  const { slug } = req.params;
+  try {
+    const [rows] = await pool.query(
+      "SELECT slug, url, clicks, created_at FROM links WHERE slug = ?",
+      [slug]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Link not found" });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
