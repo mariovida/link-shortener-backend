@@ -2,10 +2,13 @@ import { nanoid } from "nanoid";
 import { pool } from "../db.js";
 import bcrypt from "bcrypt";
 
+const ALPHABET =
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
 export const createLink = async (url, customSlug, password, expiresAt) => {
   if (!url) throw { status: 400, message: "URL is required" };
 
-  let slug = customSlug?.trim() || nanoid(6).toLowerCase();
+  let slug = customSlug?.trim() || nanoid(6, ALPHABET).toLowerCase();
   const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
   const [rows] = await pool.query("SELECT slug FROM links WHERE slug = ?", [
